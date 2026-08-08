@@ -13,3 +13,9 @@ npm-debug.log*
 .vscode
 .idea
 .history
+
+/src/generated/prisma
+.windsurf
+.claude
+.agents
+skills-lock.json
