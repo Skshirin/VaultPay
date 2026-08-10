@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
+import { prisma } from "../config/prisma.js";
 import {
-  findUserByEmail,
-  createUser
+  findUserByEmail
 } from "../repositories/user.repository.js";
 
 interface RegisterInput {
@@ -19,11 +19,24 @@ export async function registerUser(data: RegisterInput) {
 
   const passwordHash = await bcrypt.hash(data.password, 12);
 
-  const user = await createUser(
-    data.name,
-    data.email,
-    passwordHash
-  );
+  const result = await prisma.$transaction(async (tx) => {
 
-  return user;
+    const user = await tx.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        passwordHash
+      }
+    });
+
+    const wallet = await tx.wallet.create({
+      data: {
+        userId: user.id
+      }
+    });
+
+    return { user, wallet };
+  });
+
+  return result.user;
 }
