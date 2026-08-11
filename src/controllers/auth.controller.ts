@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { registerSchema } from "../validators/auth.validator";
 import { registerUser } from "../services/auth.service";
+import { loginSchema } from "../validators/auth.validator.js";
+import { loginUser } from "../services/auth.service.js";
 
 export async function register(req: Request, res: Response) {
   const result = registerSchema.safeParse(req.body);
@@ -30,6 +32,38 @@ export async function register(req: Request, res: Response) {
     ) {
       return res.status(409).json({
         message: error.message
+      });
+    }
+
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+}
+
+export async function login(req: Request, res: Response) {
+  const validationResult = loginSchema.safeParse(req.body);
+
+  if (!validationResult.success) {
+    return res.status(400).json({
+      message: "Invalid request",
+      errors: validationResult.error.flatten()
+    });
+  }
+
+  try {
+    const loginResult = await loginUser(validationResult.data);
+
+    return res.status(200).json(loginResult);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Invalid email or password"
+    ) {
+      return res.status(401).json({
+        message: "Invalid email or password"
       });
     }
 
