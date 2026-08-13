@@ -1,7 +1,8 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware.js";
 import { depositSchema } from "../validators/wallet.validator.js";
-import { depositMoney } from "../services/wallet.service.js";
+import { depositMoney,getWallet } from "../services/wallet.service.js";
+
 
 export async function deposit(
   req: AuthRequest,
@@ -23,16 +24,70 @@ export async function deposit(
   }
 
   try {
-    const wallet = await depositMoney({
+    const result = await depositMoney({
       userId: req.user.userId,
       amount: validationResult.data.amount
     });
 
     return res.status(200).json({
       message: "Money deposited successfully",
+
+      wallet: {
+        id: result.wallet.id,
+        balance: result.wallet.balance.toString()
+      },
+
+      transaction: {
+      id: result.transaction.id,
+      amount: result.transaction.amount.toString(),
+      status: result.transaction.status,
+      createdAt: result.transaction.createdAt
+    },
+
+    ledgerEntry: {
+      id: result.ledgerEntry.id,
+      type: result.ledgerEntry.type,
+      amount: result.ledgerEntry.amount.toString(),
+      createdAt: result.ledgerEntry.createdAt
+    }
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Wallet not found"
+    ) {
+      return res.status(404).json({
+        message: error.message
+      });
+    }
+
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+}
+
+export async function getWalletBalance(
+  req: AuthRequest,
+  res: Response
+) {
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Authentication required"
+    });
+  }
+
+  try {
+    const wallet = await getWallet(req.user.userId);
+
+    return res.status(200).json({
       wallet: {
         id: wallet.id,
-        balance: wallet.balance.toString()
+        balance: wallet.balance.toString(),
+        createdAt: wallet.createdAt,
+        updatedAt: wallet.updatedAt
       }
     });
   } catch (error) {
