@@ -1,10 +1,16 @@
 import { prisma } from "../config/prisma.js";
-import { findWalletByUserId } from "../repositories/wallet.repository.js";
+import { findWalletByUserId, withdrawFromWallet} from "../repositories/wallet.repository.js";
 
 interface DepositInput {
   userId: string;
   amount: number;
 }
+
+interface WithdrawInput {
+  userId: string;
+  amount: number;
+}
+
 
 export async function depositMoney({
   userId,
@@ -62,4 +68,59 @@ export async function getWallet(userId: string) {
   }
 
   return wallet;
+}
+
+export async function withdrawMoney({
+  userId,
+  amount
+}: WithdrawInput) {
+  const wallet = await findWalletByUserId(userId);
+
+  if (!wallet) {
+    throw new Error("Wallet not found");
+  }
+
+  const amountBigInt = BigInt(amount);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedCount = await withdrawFromWallet(
+      wallet.id,
+      amountBigInt,
+      tx
+    );
+
+    if (updatedCount === 0) {
+      throw new Error("Insufficient balance");
+    }
+
+    const transaction = await tx.transaction.create({
+      data: {
+        amount: amountBigInt,
+        status: "COMPLETED"
+      }
+    });
+
+    const ledgerEntry = await tx.ledgerEntry.create({
+      data: {
+        transactionId: transaction.id,
+        walletId: wallet.id,
+        type: "DEBIT",
+        amount: amountBigInt
+      }
+    });
+
+    const updatedWallet = await tx.wallet.findUnique({
+      where: {
+        id: wallet.id
+      }
+    });
+
+    return {
+      wallet: updatedWallet,
+      transaction,
+      ledgerEntry
+    };
+  });
+
+  return result;
 }
