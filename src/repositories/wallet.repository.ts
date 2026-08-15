@@ -33,3 +33,27 @@ export async function withdrawFromWallet(
 
   return result.count;
 }
+
+export async function findTransactionsByWalletId(
+  walletId: string
+) {
+  return prisma.transaction.findMany({
+    where: {
+      ledgerEntries: {
+        some: {
+          walletId
+        }
+      }
+    },
+    include: {
+      ledgerEntries: {
+        where: {
+          walletId
+        }
+      }
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
+  });
+}

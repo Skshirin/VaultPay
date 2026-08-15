@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { findWalletByUserId, withdrawFromWallet} from "../repositories/wallet.repository.js";
+import { findWalletByUserId, withdrawFromWallet,findTransactionsByWalletId} from "../repositories/wallet.repository.js";
 
 interface DepositInput {
   userId: string;
@@ -123,4 +123,19 @@ export async function withdrawMoney({
   });
 
   return result;
+}
+export async function getWalletTransactions(
+  userId: string
+) {
+  const wallet = await findWalletByUserId(userId);
+
+  if (!wallet) {
+    throw new Error("Wallet not found");
+  }
+
+  const transactions = await findTransactionsByWalletId(
+    wallet.id
+  );
+
+  return transactions;
 }
