@@ -35,7 +35,9 @@ export async function withdrawFromWallet(
 }
 
 export async function findTransactionsByWalletId(
-  walletId: string
+  walletId: string,
+  skip: number,
+  limit: number
 ) {
   return prisma.transaction.findMany({
     where: {
@@ -45,6 +47,7 @@ export async function findTransactionsByWalletId(
         }
       }
     },
+
     include: {
       ledgerEntries: {
         where: {
@@ -52,8 +55,12 @@ export async function findTransactionsByWalletId(
         }
       }
     },
+
     orderBy: {
       createdAt: "desc"
-    }
+    },
+
+    skip,
+    take: limit
   });
 }

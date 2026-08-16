@@ -125,7 +125,9 @@ export async function withdrawMoney({
   return result;
 }
 export async function getWalletTransactions(
-  userId: string
+  userId: string,
+  page: number,
+  limit: number
 ) {
   const wallet = await findWalletByUserId(userId);
 
@@ -133,8 +135,12 @@ export async function getWalletTransactions(
     throw new Error("Wallet not found");
   }
 
+  const skip = (page - 1) * limit;
+
   const transactions = await findTransactionsByWalletId(
-    wallet.id
+    wallet.id,
+    skip,
+    limit
   );
 
   return transactions;
