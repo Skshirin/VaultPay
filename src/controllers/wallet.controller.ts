@@ -2,7 +2,8 @@ import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware.js";
 import {
   depositSchema,
-  withdrawSchema
+  withdrawSchema,
+  transactionPaginationSchema
 } from "../validators/wallet.validator.js";
 import {
   depositMoney,
@@ -200,12 +201,28 @@ export async function getTransactions(
     });
   }
 
+  const validationResult =
+    transactionPaginationSchema.safeParse(req.query);
+
+  if (!validationResult.success) {
+    return res.status(400).json({
+      message: "Invalid pagination parameters",
+      errors: validationResult.error.flatten()
+    });
+  }
+
+  const { page, limit } = validationResult.data;
+
   try {
     const transactions = await getWalletTransactions(
-      req.user.userId
+      req.user.userId,
+      page,
+      limit
     );
 
     return res.status(200).json({
+      page,
+      limit,
       transactions: transactions.map((transaction) => ({
         id: transaction.id,
         amount: transaction.amount.toString(),
