@@ -147,11 +147,19 @@ export async function getWalletTransactions(
 
   const skip = (page - 1) * limit;
 
-  const transactions = await findTransactionsByWalletId(
-    wallet.id,
-    skip,
-    limit
-  );
+  const result = await findTransactionsByWalletId(
+  wallet.id,
+  skip,
+  limit
+);
 
-  return transactions;
+return {
+  transactions: result.transactions,
+  pagination: {
+    page,
+    limit,
+    total: result.total,
+    totalPages: Math.ceil(result.total / limit)
+  }
+};
 }

@@ -214,16 +214,14 @@ export async function getTransactions(
   const { page, limit } = validationResult.data;
 
   try {
-    const transactions = await getWalletTransactions(
+    const result = await getWalletTransactions(
       req.user.userId,
       page,
       limit
     );
 
     return res.status(200).json({
-      page,
-      limit,
-      transactions: transactions.map((transaction) => ({
+      transactions: result.transactions.map((transaction) => ({
         id: transaction.id,
         amount: transaction.amount.toString(),
         status: transaction.status,
@@ -239,7 +237,9 @@ export async function getTransactions(
                 transaction.ledgerEntries[0].createdAt
             }
           : null
-      }))
+      })),
+
+      pagination: result.pagination
     });
   } catch (error) {
     if (

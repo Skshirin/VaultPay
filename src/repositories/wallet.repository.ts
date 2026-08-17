@@ -39,30 +39,47 @@ export async function findTransactionsByWalletId(
   skip: number,
   limit: number
 ) {
-  return prisma.transaction.findMany({
-    where: {
-      ledgerEntries: {
-        some: {
-          walletId
+  const [transactions, total] = await Promise.all([
+    prisma.transaction.findMany({
+      where: {
+        ledgerEntries: {
+          some: {
+            walletId
+          }
+        }
+      },
+
+      include: {
+        ledgerEntries: {
+          where: {
+            walletId
+          }
+        }
+      },
+
+      orderBy: {
+        createdAt: "desc"
+      },
+
+      skip,
+      take: limit
+    }),
+
+    prisma.transaction.count({
+      where: {
+        ledgerEntries: {
+          some: {
+            walletId
+          }
         }
       }
-    },
+    })
+  ]);
 
-    include: {
-      ledgerEntries: {
-        where: {
-          walletId
-        }
-      }
-    },
-
-    orderBy: {
-      createdAt: "desc"
-    },
-
-    skip,
-    take: limit
-  });
+  return {
+    transactions,
+    total
+  };
 }
 
 export async function depositIntoWallet(
