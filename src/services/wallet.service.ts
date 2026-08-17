@@ -1,5 +1,10 @@
 import { prisma } from "../config/prisma.js";
-import { findWalletByUserId, withdrawFromWallet,findTransactionsByWalletId} from "../repositories/wallet.repository.js";
+import {
+  findWalletByUserId,
+  depositIntoWallet,
+  withdrawFromWallet,
+  findTransactionsByWalletId
+} from "../repositories/wallet.repository.js";
 
 interface DepositInput {
   userId: string;
@@ -11,7 +16,6 @@ interface WithdrawInput {
   amount: number;
 }
 
-
 export async function depositMoney({
   userId,
   amount
@@ -22,21 +26,22 @@ export async function depositMoney({
     throw new Error("Wallet not found");
   }
 
+  if (amount <= 0) {
+    throw new Error("Deposit amount must be greater than zero");
+  }
+
+  const amountBigInt = BigInt(amount);
+
   const result = await prisma.$transaction(async (tx) => {
-    const updatedWallet = await tx.wallet.update({
-      where: {
-        id: wallet.id
-      },
-      data: {
-        balance: {
-          increment: BigInt(amount)
-        }
-      }
-    });
+    const updatedWallet = await depositIntoWallet(
+      wallet.id,
+      amountBigInt,
+      tx
+    );
 
     const transaction = await tx.transaction.create({
       data: {
-        amount: BigInt(amount),
+        amount: amountBigInt,
         status: "COMPLETED"
       }
     });
@@ -46,7 +51,7 @@ export async function depositMoney({
         transactionId: transaction.id,
         walletId: wallet.id,
         type: "CREDIT",
-        amount: BigInt(amount)
+        amount: amountBigInt
       }
     });
 
@@ -78,6 +83,10 @@ export async function withdrawMoney({
 
   if (!wallet) {
     throw new Error("Wallet not found");
+  }
+
+  if (amount <= 0) {
+    throw new Error("Withdrawal amount must be greater than zero");
   }
 
   const amountBigInt = BigInt(amount);
@@ -124,6 +133,7 @@ export async function withdrawMoney({
 
   return result;
 }
+
 export async function getWalletTransactions(
   userId: string,
   page: number,

@@ -64,3 +64,20 @@ export async function findTransactionsByWalletId(
     take: limit
   });
 }
+
+export async function depositIntoWallet(
+  walletId: string,
+  amount: bigint,
+  tx: PrismaTransactionClient
+) {
+  return tx.wallet.update({
+    where: {
+      id: walletId
+    },
+    data: {
+      balance: {
+        increment: amount
+      }
+    }
+  });
+}
