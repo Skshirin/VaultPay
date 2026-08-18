@@ -3,13 +3,15 @@ import { AuthRequest } from "../middleware/auth.middleware.js";
 import {
   depositSchema,
   withdrawSchema,
-  transactionPaginationSchema
+  transactionPaginationSchema,
+  transferSchema
 } from "../validators/wallet.validator.js";
 import {
   depositMoney,
   getWallet,
   withdrawMoney,
-  getWalletTransactions
+  getWalletTransactions,
+  transferMoney
 } from "../services/wallet.service.js";
 
 
@@ -247,6 +249,111 @@ export async function getTransactions(
       error.message === "Wallet not found"
     ) {
       return res.status(404).json({
+        message: error.message
+      });
+    }
+
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal server error"
+    });
+  }
+}
+
+export async function transfer(
+  req: AuthRequest,
+  res: Response
+) {
+  const validationResult = transferSchema.safeParse(req.body);
+
+  if (!validationResult.success) {
+    return res.status(400).json({
+      message: "Invalid request",
+      errors: validationResult.error.flatten()
+    });
+  }
+
+  if (!req.user) {
+    return res.status(401).json({
+      message: "Authentication required"
+    });
+  }
+
+  try {
+    const result = await transferMoney({
+      userId: req.user.userId,
+      receiverUserId: validationResult.data.receiverUserId,
+      amount: validationResult.data.amount
+    });
+
+    return res.status(200).json({
+      message: "Money transferred successfully",
+
+      transaction: {
+        id: result.transaction.id,
+        amount: result.transaction.amount.toString(),
+        status: result.transaction.status,
+        createdAt: result.transaction.createdAt
+      },
+
+      senderWallet: {
+        id: result.senderWallet?.id,
+        balance: result.senderWallet?.balance.toString()
+      },
+
+      receiverWallet: {
+        id: result.receiverWallet.id,
+        balance: result.receiverWallet.balance.toString()
+      },
+
+      debitEntry: {
+        id: result.debitEntry.id,
+        type: result.debitEntry.type,
+        amount: result.debitEntry.amount.toString(),
+        createdAt: result.debitEntry.createdAt
+      },
+
+      creditEntry: {
+        id: result.creditEntry.id,
+        type: result.creditEntry.type,
+        amount: result.creditEntry.amount.toString(),
+        createdAt: result.creditEntry.createdAt
+      }
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Sender wallet not found"
+    ) {
+      return res.status(404).json({
+        message: error.message
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "Receiver wallet not found"
+    ) {
+      return res.status(404).json({
+        message: error.message
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "Insufficient balance"
+    ) {
+      return res.status(400).json({
+        message: error.message
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "Cannot transfer money to yourself"
+    ) {
+      return res.status(400).json({
         message: error.message
       });
     }

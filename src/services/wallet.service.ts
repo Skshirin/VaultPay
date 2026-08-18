@@ -163,3 +163,95 @@ return {
   }
 };
 }
+
+interface TransferInput {
+  userId: string;
+  receiverUserId: string;
+  amount: number;
+}
+
+export async function transferMoney({
+  userId,
+  receiverUserId,
+  amount
+}: TransferInput) {
+  if (amount <= 0) {
+    throw new Error("Transfer amount must be greater than zero");
+  }
+
+  if (userId === receiverUserId) {
+    throw new Error("Cannot transfer money to yourself");
+  }
+
+  const senderWallet = await findWalletByUserId(userId);
+  const receiverWallet = await findWalletByUserId(receiverUserId);
+
+  if (!senderWallet) {
+    throw new Error("Sender wallet not found");
+  }
+
+  if (!receiverWallet) {
+    throw new Error("Receiver wallet not found");
+  }
+
+  const amountBigInt = BigInt(amount);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedSenderCount = await withdrawFromWallet(
+      senderWallet.id,
+      amountBigInt,
+      tx
+    );
+
+    if (updatedSenderCount === 0) {
+      throw new Error("Insufficient balance");
+    }
+
+    const updatedReceiver = await depositIntoWallet(
+      receiverWallet.id,
+      amountBigInt,
+      tx
+    );
+
+    const transaction = await tx.transaction.create({
+      data: {
+        amount: amountBigInt,
+        status: "COMPLETED"
+      }
+    });
+
+    const debitEntry = await tx.ledgerEntry.create({
+      data: {
+        transactionId: transaction.id,
+        walletId: senderWallet.id,
+        type: "DEBIT",
+        amount: amountBigInt
+      }
+    });
+
+    const creditEntry = await tx.ledgerEntry.create({
+      data: {
+        transactionId: transaction.id,
+        walletId: receiverWallet.id,
+        type: "CREDIT",
+        amount: amountBigInt
+      }
+    });
+
+    const updatedSender = await tx.wallet.findUnique({
+      where: {
+        id: senderWallet.id
+      }
+    });
+
+    return {
+      transaction,
+      senderWallet: updatedSender,
+      receiverWallet: updatedReceiver,
+      debitEntry,
+      creditEntry
+    };
+  });
+
+  return result;
+}
