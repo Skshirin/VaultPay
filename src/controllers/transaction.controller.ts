@@ -14,8 +14,17 @@ export class TransactionController {
       const transactions =
         await this.transactionService.getTransactions(walletId);
 
+      const formattedTransactions = transactions.map((transaction) => ({
+        ...transaction,
+        amount: transaction.amount.toString(),
+        ledgerEntries: transaction.ledgerEntries.map((entry) => ({
+          ...entry,
+          amount: entry.amount.toString(),
+        })),
+      }));
+
       return res.status(200).json({
-        transactions,
+        transactions: formattedTransactions,
       });
     } catch (error) {
       console.error("Error fetching transactions:", error);
