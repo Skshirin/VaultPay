@@ -2,7 +2,6 @@ import express from "express";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import walletRoutes from "./routes/wallet.routes.js";
-import transactionRoutes from "./routes/transaction.routes.js";
 
 const app = express();
 
@@ -18,6 +17,5 @@ app.get("/health", (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/wallet", walletRoutes);
-app.use("/api/v1/transaction", transactionRoutes);
 
 export default app;

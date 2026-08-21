@@ -1,10 +1,22 @@
-import app from "./app";
-import dotenv from "dotenv";
+import express from "express";
 
-dotenv.config();
+import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import walletRoutes from "./routes/wallet.routes.js";
 
-const PORT = process.env.PORT || 5000;
+const app = express();
 
-app.listen(PORT, () => {
-  console.log(`VaultPay server running on port ${PORT}`);
+app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "VaultPay API is running"
+  });
 });
+
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/wallet", walletRoutes);
+
+export default app;
