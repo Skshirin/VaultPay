@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import { TransactionService } from "../services/transaction.service.js";
 
 export class TransactionController {
-  constructor(private transactionService: TransactionService) {}
+  constructor(private transactionService: any) {}
 
   async getTransactions(
     req: Request<{ walletId: string }>,
@@ -14,10 +13,10 @@ export class TransactionController {
       const transactions =
         await this.transactionService.getTransactions(walletId);
 
-      const formattedTransactions = transactions.map((transaction) => ({
+      const formattedTransactions = transactions.map((transaction: any) => ({
         ...transaction,
         amount: transaction.amount.toString(),
-        ledgerEntries: transaction.ledgerEntries.map((entry) => ({
+        ledgerEntries: transaction.ledgerEntries.map((entry: any) => ({
           ...entry,
           amount: entry.amount.toString(),
         })),
